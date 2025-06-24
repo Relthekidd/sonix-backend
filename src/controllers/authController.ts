@@ -1,11 +1,21 @@
-import { Request, Response } from 'express';
+import { NextFunction, NextFunction, NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { UserModel, CreateUserData } from '@/models/User';
 import { ArtistModel } from '@/models/Artist';
 import { AuthRequest } from '@/middleware/authMiddleware';
 import { supabase } from '@/database/supabaseClient';
+import { ValidationChain } from 'express-validator';
 
 export class AuthController {
+  static getMe(arg0: string, authenticate: (req: AuthRequest, res: Response, next: NextFunction) => Promise<Response<any, Record<string, any>> | undefined>, getMe: any) {
+      throw new Error('Method not implemented.');
+  }
+  static changePassword(arg0: string, authenticate: (req: AuthRequest, res: Response, next: NextFunction) => Promise<Response<any, Record<string, any>> | undefined>, validateChangePassword: (((req: Request, res: Response, next: NextFunction) => void | Response<any, Record<string, any>>) | ValidationChain)[], changePassword: any) {
+      throw new Error('Method not implemented.');
+  }
+  static refreshToken(arg0: string, authenticate: (req: AuthRequest, res: Response, next: NextFunction) => Promise<Response<any, Record<string, any>> | undefined>, refreshToken: any) {
+      throw new Error('Method not implemented.');
+  }
   static async register(req: Request, res: Response) {
     try {
       const { email, password, displayName, firstName, lastName, role } = req.body;
@@ -44,7 +54,7 @@ export class AuthController {
       const token = jwt.sign(
         { userId: user.id, email: user.email, role: user.role },
         secret,
-        { expiresIn: expiresIn as string }
+        { expiresIn }
       );
 
       const { password_hash, ...userResponse } = user;
@@ -94,13 +104,13 @@ export class AuthController {
       await UserModel.updateLastLogin(user.id);
 
       const secret = process.env.JWT_SECRET as string;
-      const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
+      const expiresIn: string | number = process.env.JWT_EXPIRES_IN || '7d';
       if (!secret) throw new Error('JWT_SECRET not set');
 
       const token = jwt.sign(
         { userId: user.id, email: user.email, role: user.role },
         secret,
-        { expiresIn: expiresIn as string }
+        { expiresIn }
       );
 
       const { password_hash, ...userResponse } = user;

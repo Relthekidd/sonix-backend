@@ -10,7 +10,7 @@ export const handleValidationErrors = (req: Request, res: Response, next: NextFu
       errors: errors.array()
     });
   }
-  next();
+  return next();
 };
 
 export const validateRegistration = [

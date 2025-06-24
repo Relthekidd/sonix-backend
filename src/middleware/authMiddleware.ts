@@ -30,6 +30,7 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
     
     req.user = user;
     next();
+    return;
   } catch (error) {
     return res.status(401).json({
       success: false,
@@ -55,10 +56,11 @@ export const authorize = (...roles: string[]) => {
     }
     
     next();
+    return;
   };
 };
 
-export const optionalAuth = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const optionalAuth = async (req: AuthRequest, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;
     

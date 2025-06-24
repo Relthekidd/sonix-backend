@@ -34,6 +34,12 @@ export class ArtistController {
   static async getArtistById(req: Request, res: Response) {
     try {
       const { id } = req.params;
+      if (!id || typeof id !== 'string') {
+        return res.status(400).json({
+          success: false,
+          message: 'Artist id is required'
+        });
+      }
       const artist = await ArtistModel.findById(id);
 
       if (!artist) {
@@ -43,13 +49,13 @@ export class ArtistController {
         });
       }
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         data: artist
       });
     } catch (error) {
       console.error('Get artist error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to get artist',
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -68,13 +74,13 @@ export class ArtistController {
         });
       }
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         data: artist
       });
     } catch (error) {
       console.error('Get my artist profile error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to get artist profile',
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -105,14 +111,14 @@ export class ArtistController {
 
       const artist = await ArtistModel.create(artistData);
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         message: 'Artist application submitted successfully. Please wait for admin approval.',
         data: artist
       });
     } catch (error) {
       console.error('Create artist error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to create artist profile',
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -142,14 +148,14 @@ export class ArtistController {
 
       const updatedArtist = await ArtistModel.update(artist.id, updateData);
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: 'Artist profile updated successfully',
         data: updatedArtist
       });
     } catch (error) {
       console.error('Update artist error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to update artist profile',
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -160,17 +166,23 @@ export class ArtistController {
   static async getArtistTracks(req: Request, res: Response) {
     try {
       const { id } = req.params;
+      if (!id || typeof id !== 'string') {
+        return res.status(400).json({
+          success: false,
+          message: 'Artist id is required'
+        });
+      }
       const published = req.query.published !== 'false';
 
       const tracks = await TrackModel.findByArtist(id, published);
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         data: tracks
       });
     } catch (error) {
       console.error('Get artist tracks error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to get artist tracks',
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -211,14 +223,14 @@ export class ArtistController {
 
       const artists = await ArtistModel.search(q as string, limit);
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         data: artists,
         query: q
       });
     } catch (error) {
       console.error('Search artists error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to search artists',
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -226,7 +238,7 @@ export class ArtistController {
     }
   }
 
-  static async getPendingArtists(req: AuthRequest, res: Response) {
+  static async getPendingArtists(_req: AuthRequest, res: Response) {
     try {
       const pendingArtists = await ArtistModel.getUnverifiedArtists();
 
@@ -249,6 +261,13 @@ export class ArtistController {
       const { id } = req.params;
       const { isVerified } = req.body;
 
+      if (typeof id !== 'string' || !id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Artist id is required'
+        });
+      }
+
       if (typeof isVerified !== 'boolean') {
         return res.status(400).json({
           success: false,
@@ -266,14 +285,14 @@ export class ArtistController {
 
       const updatedArtist = await ArtistModel.updateVerificationStatus(id, isVerified);
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: `Artist ${isVerified ? 'approved' : 'rejected'} successfully`,
         data: updatedArtist
       });
     } catch (error) {
       console.error('Update artist status error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to update artist status',
         error: error instanceof Error ? error.message : 'Unknown error'

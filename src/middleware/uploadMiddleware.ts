@@ -1,18 +1,30 @@
 import multer from 'multer';
 import multerS3 from 'multer-s3';
-import AWS from 'aws-sdk';
+import { S3Client } from '@aws-sdk/client-s3';
 import { Request } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 
-// Configure AWS
-AWS.config.update({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION
-});
+// Extend Express Request interface to include 'user'
+declare module 'express-serve-static-core' {
+  interface Request {
+    user?: {
+      id?: string;
+      [key: string]: any;
+    };
+  }
+}
 
-const s3 = new AWS.S3();
+// Configure AWS S3Client (SDK v3)
+const s3 = new S3Client({
+  region: process.env.AWS_REGION || 'us-east-1',
+  credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+    ? {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      }
+    : undefined,
+});
 
 // File filter function
 const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
@@ -98,10 +110,13 @@ export const deleteFromS3 = async (fileUrl: string): Promise<void> => {
   try {
     const url = new URL(fileUrl);
     const key = url.pathname.substring(1); // Remove leading slash
-    
-    await s3.deleteObject({
+    // Use AWS SDK v3 command for deleting objects
+    // Import DeleteObjectCommand at the top: import { DeleteObjectCommand } from '@aws-sdk/client-s3';
+    const { DeleteObjectCommand } = await import('@aws-sdk/client-s3');
+    await s3.send(new DeleteObjectCommand({
       Bucket: process.env.S3_BUCKET_NAME!,
       Key: key
+    }));
     }).promise();
   } catch (error) {
     console.error('Error deleting file from S3:', error);

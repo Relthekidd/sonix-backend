@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { AuthRequest } from '@/middleware/authMiddleware';
 import { ArtistModel } from '@/models/Artist';
 
@@ -23,7 +23,7 @@ export class UploadController {
 
       const audioUrl = (req.file as any).location || req.file.path;
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         message: 'Audio file uploaded successfully',
         data: {
@@ -35,7 +35,7 @@ export class UploadController {
       });
     } catch (error) {
       console.error('Upload audio error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Audio upload failed',
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -54,7 +54,7 @@ export class UploadController {
 
       const imageUrl = (req.file as any).location || req.file.path;
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         message: 'Image uploaded successfully',
         data: {
@@ -66,7 +66,7 @@ export class UploadController {
       });
     } catch (error) {
       console.error('Upload image error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Image upload failed',
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -97,10 +97,17 @@ export class UploadController {
       const audioFile = files.audio[0];
       const coverFile = files.cover ? files.cover[0] : null;
 
-      const audioUrl = (audioFile as any).location || audioFile.path;
+      const audioUrl = audioFile ? ((audioFile as any).location || audioFile.path) : null;
       const coverUrl = coverFile ? ((coverFile as any).location || coverFile.path) : null;
 
-      res.status(201).json({
+      if (!audioFile) {
+        return res.status(400).json({
+          success: false,
+          message: 'Audio file is required'
+        });
+      }
+
+      return res.status(201).json({
         success: true,
         message: 'Track files uploaded successfully',
         data: {
@@ -120,7 +127,7 @@ export class UploadController {
       });
     } catch (error) {
       console.error('Upload track files error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Track files upload failed',
         error: error instanceof Error ? error.message : 'Unknown error'
