@@ -53,7 +53,7 @@ const fileFilter = (_req: Request, file: Express.Multer.File, cb: multer.FileFil
 // S3 upload configuration
 const s3Upload = multerS3({
   s3: s3,
-  bucket: process.env.S3_BUCKET_NAME!,
+  bucket: process.env.AWS_S3_BUCKET!, // <-- use AWS_S3_BUCKET for consistency
   acl: 'public-read',
   metadata: (_req: Request, file, cb) => {
     cb(null, {
