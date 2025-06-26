@@ -24,7 +24,7 @@ const router = express.Router();
  *       200:
  *         description: Albums retrieved successfully
  */
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', async (_req: Request, res: Response) => {
   try {
     // TODO: Implement get albums logic
     res.status(200).json({

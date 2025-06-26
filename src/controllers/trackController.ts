@@ -40,6 +40,12 @@ export class TrackController {
   static async getTrackById(req: Request, res: Response) {
     try {
       const { id } = req.params;
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Track ID is required'
+        });
+      }
       const track = await TrackModel.findById(id);
 
       if (!track) {
@@ -49,13 +55,13 @@ export class TrackController {
         });
       }
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         data: track
       });
     } catch (error) {
       console.error('Get track error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to get track',
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -105,14 +111,14 @@ export class TrackController {
 
       const track = await TrackModel.create(trackData);
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         message: 'Track created successfully',
         data: track
       });
     } catch (error) {
       console.error('Create track error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to create track',
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -123,6 +129,12 @@ export class TrackController {
   static async updateTrack(req: AuthRequest, res: Response) {
     try {
       const { id } = req.params;
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Track ID is required'
+        });
+      }
       const updateData: UpdateTrackData = req.body;
 
       // Verify track exists and user owns it
@@ -144,14 +156,14 @@ export class TrackController {
 
       const updatedTrack = await TrackModel.update(id, updateData);
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: 'Track updated successfully',
         data: updatedTrack
       });
     } catch (error) {
       console.error('Update track error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to update track',
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -162,6 +174,12 @@ export class TrackController {
   static async deleteTrack(req: AuthRequest, res: Response) {
     try {
       const { id } = req.params;
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Track ID is required'
+        });
+      }
 
       // Verify track exists and user owns it
       const track = await TrackModel.findById(id);
@@ -182,13 +200,13 @@ export class TrackController {
 
       await TrackModel.delete(id);
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: 'Track deleted successfully'
       });
     } catch (error) {
       console.error('Delete track error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to delete track',
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -199,6 +217,12 @@ export class TrackController {
   static async recordPlay(req: AuthRequest, res: Response) {
     try {
       const { id } = req.params;
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Track ID is required'
+        });
+      }
       const { playDuration, completed, deviceType } = req.body;
 
       // Verify track exists
@@ -223,13 +247,13 @@ export class TrackController {
       // Increment play count
       await TrackModel.incrementPlayCount(id);
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: 'Play recorded successfully'
       });
     } catch (error) {
       console.error('Record play error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to record play',
         error: error instanceof Error ? error.message : 'Unknown error'

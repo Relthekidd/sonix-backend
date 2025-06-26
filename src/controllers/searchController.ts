@@ -76,7 +76,7 @@ export class SearchController {
       const suggestions = [
         ...tracks.map(track => ({ type: 'track', ...track })),
         ...artists.map(artist => ({ type: 'artist', ...artist })),
-        ...albums.map(album => ({ type: 'album', ...album }))
+        ...albums.map(album => ({ ...album, type: 'album' }))
       ].slice(0, limit);
 
       res.status(200).json({

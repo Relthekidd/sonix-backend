@@ -53,6 +53,12 @@ export class PlaylistController {
   static async getPlaylistById(req: Request, res: Response) {
     try {
       const { id } = req.params;
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Playlist ID is required'
+        });
+      }
       const playlist = await PlaylistModel.findById(id);
 
       if (!playlist) {
@@ -115,6 +121,12 @@ export class PlaylistController {
   static async updatePlaylist(req: AuthRequest, res: Response) {
     try {
       const { id } = req.params;
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Playlist ID is required'
+        });
+      }
       const updateData: UpdatePlaylistData = req.body;
 
       // Verify playlist exists and user owns it
@@ -135,7 +147,7 @@ export class PlaylistController {
 
       const updatedPlaylist = await PlaylistModel.update(id, updateData);
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: 'Playlist updated successfully',
         data: updatedPlaylist
@@ -153,6 +165,12 @@ export class PlaylistController {
   static async deletePlaylist(req: AuthRequest, res: Response) {
     try {
       const { id } = req.params;
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Playlist ID is required'
+        });
+      }
 
       // Verify playlist exists and user owns it
       const playlist = await PlaylistModel.findById(id);
@@ -190,6 +208,19 @@ export class PlaylistController {
     try {
       const { id } = req.params;
       const { trackId } = req.body;
+
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Playlist ID is required'
+        });
+      }
+      if (!trackId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Track ID is required'
+        });
+      }
 
       // Verify playlist exists and user has access
       const playlist = await PlaylistModel.findById(id);
@@ -240,6 +271,19 @@ export class PlaylistController {
   static async removeTrackFromPlaylist(req: AuthRequest, res: Response) {
     try {
       const { id, trackId } = req.params;
+
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Playlist ID is required'
+        });
+      }
+      if (!trackId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Track ID is required'
+        });
+      }
 
       // Verify playlist exists and user has access
       const playlist = await PlaylistModel.findById(id);

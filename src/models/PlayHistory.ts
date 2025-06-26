@@ -14,10 +14,10 @@ export interface PlayHistory {
 export interface CreatePlayHistoryData {
   user_id: string;
   track_id: string;
-  play_duration?: number;
-  completed?: boolean;
-  device_type?: string;
-  ip_address?: string;
+  play_duration?: number | undefined;
+  completed?: boolean | undefined;
+  device_type?: string | undefined;
+  ip_address?: string | undefined;
 }
 
 export class PlayHistoryModel {

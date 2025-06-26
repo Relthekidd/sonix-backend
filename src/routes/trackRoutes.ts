@@ -1,6 +1,6 @@
 import express from 'express';
 import { TrackController } from '@/controllers/trackController';
-import { authenticate, authorize } from '@/middleware/authMiddleware';
+import { authenticate } from '@/middleware/authMiddleware';
 import { uploadTrackFiles } from '@/middleware/uploadMiddleware';
 
 const router = express.Router();
