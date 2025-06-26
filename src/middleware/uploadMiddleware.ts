@@ -1,7 +1,6 @@
 import multer from 'multer';
 import multerS3 from 'multer-s3';
 import { S3Client } from '@aws-sdk/client-s3';
-import { Request } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 
@@ -15,19 +14,23 @@ declare module 'express-serve-static-core' {
   }
 }
 
-// Configure AWS S3Client (SDK v3)
+import { Request } from 'express';
+
+// Configure AWS S3Client (SDK v3) with spread syntax for credentials
 const s3 = new S3Client({
   region: process.env.AWS_REGION || 'us-east-1',
-  credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+  ...(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
     ? {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        } as { accessKeyId: string; secretAccessKey: string }
       }
-    : undefined,
+    : {})
 });
 
 // File filter function
-const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+const fileFilter = (_req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   if (file.fieldname === 'audio') {
     // Audio files
     if (file.mimetype.startsWith('audio/')) {
@@ -52,14 +55,14 @@ const s3Upload = multerS3({
   s3: s3,
   bucket: process.env.S3_BUCKET_NAME!,
   acl: 'public-read',
-  metadata: (req, file, cb) => {
+  metadata: (_req: Request, file, cb) => {
     cb(null, {
       fieldName: file.fieldname,
-      uploadedBy: req.user?.id || 'anonymous',
+      uploadedBy: _req.user?.id || 'anonymous',
       uploadedAt: new Date().toISOString()
     });
   },
-  key: (req, file, cb) => {
+  key: (_req: Request, file, cb) => {
     const fileExtension = path.extname(file.originalname);
     const fileName = `${uuidv4()}${fileExtension}`;
     
@@ -117,7 +120,6 @@ export const deleteFromS3 = async (fileUrl: string): Promise<void> => {
       Bucket: process.env.S3_BUCKET_NAME!,
       Key: key
     }));
-    }).promise();
   } catch (error) {
     console.error('Error deleting file from S3:', error);
     throw error;
