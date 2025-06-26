@@ -78,11 +78,11 @@ export class AuthController {
         }
       });
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error('Registration error:', error, 'Request body:', req.body);
       return res.status(500).json({
         success: false,
         message: 'Registration failed',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : JSON.stringify(error)
       });
     }
   }

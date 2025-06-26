@@ -42,7 +42,14 @@ export class UserModel {
       .insert([userData])
       .select()
       .single();
-    if (error || !data) throw error || new Error('Failed to create user');
+    if (error) {
+      console.error('Supabase insert error:', error);
+      throw error;
+    }
+    if (!data) {
+      console.error('Supabase insert returned no data:', userData);
+      throw new Error('Failed to create user');
+    }
     return data;
   }
 
