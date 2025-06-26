@@ -27,6 +27,8 @@ import uploadRoutes from '@/routes/uploadRoutes';
 dotenv.config();
 
 const app = express();
+app.set('trust proxy', 1); // Enable trust proxy for correct req.ip and secure cookies
+
 const PORT = process.env.PORT || 3000;
 const API_VERSION = process.env.API_VERSION || 'v1';
 
