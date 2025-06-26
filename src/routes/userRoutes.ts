@@ -17,7 +17,7 @@ const router = express.Router();
  *       401:
  *         description: Unauthorized
  */
-router.get('/profile', async (req: Request, res: Response) => {
+router.get('/profile', async (_req: Request, res: Response) => {
   try {
     // TODO: Implement get user profile logic
     res.status(200).json({

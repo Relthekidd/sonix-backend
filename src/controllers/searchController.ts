@@ -36,7 +36,7 @@ export class SearchController {
         results.playlists = await PlaylistModel.search(query, limit);
       }
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         data: results,
         query,
@@ -44,7 +44,7 @@ export class SearchController {
       });
     } catch (error) {
       console.error('Search error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Search failed',
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -79,14 +79,14 @@ export class SearchController {
         ...albums.map(album => ({ ...album, type: 'album' }))
       ].slice(0, limit);
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         data: suggestions,
         query
       });
     } catch (error) {
       console.error('Get suggestions error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to get suggestions',
         error: error instanceof Error ? error.message : 'Unknown error'

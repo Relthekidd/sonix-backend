@@ -71,7 +71,7 @@ export class PlaylistController {
       // Get playlist tracks
       const tracks = await PlaylistTrackModel.getPlaylistTracks(id);
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         data: {
           ...playlist,
@@ -80,7 +80,7 @@ export class PlaylistController {
       });
     } catch (error) {
       console.error('Get playlist error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to get playlist',
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -154,7 +154,7 @@ export class PlaylistController {
       });
     } catch (error) {
       console.error('Update playlist error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to update playlist',
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -190,13 +190,13 @@ export class PlaylistController {
 
       await PlaylistModel.delete(id);
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: 'Playlist deleted successfully'
       });
     } catch (error) {
       console.error('Delete playlist error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to delete playlist',
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -254,13 +254,13 @@ export class PlaylistController {
         added_by: req.user.id
       });
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: 'Track added to playlist successfully'
       });
     } catch (error) {
       console.error('Add track to playlist error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to add track to playlist',
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -304,13 +304,13 @@ export class PlaylistController {
       // Remove track from playlist
       await PlaylistTrackModel.removeTrack(id, trackId);
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: 'Track removed from playlist successfully'
       });
     } catch (error) {
       console.error('Remove track from playlist error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to remove track from playlist',
         error: error instanceof Error ? error.message : 'Unknown error'
