@@ -11,7 +11,6 @@ import dotenv from 'dotenv';
 
 import { errorHandler, notFound } from '@/middleware/errorMiddleware';
 import { generalLimiter, authLimiter, uploadLimiter, searchLimiter } from '@/middleware/rateLimitMiddleware';
-import { setupDatabase } from '@/database/connection';
 import { WebSocketService } from '@/services/websocketService';
 import { AnalyticsService } from '@/services/analyticsService';
 
@@ -160,9 +159,6 @@ app.use(errorHandler);
 // Initialize database and start server
 const startServer = async () => {
   try {
-    // Setup database
-    await setupDatabase();
-    console.log('✅ Database connected and migrations completed');
     
     // Initialize WebSocket service
     wsService = new WebSocketService(server);
@@ -202,7 +198,7 @@ const gracefulShutdown = (signal: string) => {
     console.log('✅ HTTP server closed');
     
     // Close database connections
-    // db.destroy() if using Knex
+    // db.destroy() if using 
     
     console.log('✅ Database connections closed');
     console.log('👋 Server shutdown complete');

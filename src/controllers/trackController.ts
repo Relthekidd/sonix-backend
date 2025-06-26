@@ -241,7 +241,7 @@ export class TrackController {
         play_duration: playDuration,
         completed,
         device_type: deviceType,
-        ip_address: req.ip
+        ip_address: req.ip ?? ''
       });
 
       // Increment play count

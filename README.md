@@ -211,18 +211,6 @@ npm run migrate      # Run database migrations
 npm run seed         # Seed database
 ```
 
-### Database Migrations
-```bash
-# Create new migration
-npx knex migrate:make migration_name
-
-# Run migrations
-npm run migrate
-
-# Rollback migration
-npm run migrate:rollback
-```
-
 ## Deployment
 
 ### Environment Variables

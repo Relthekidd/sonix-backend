@@ -1,4 +1,4 @@
-import db from '@/database/connection';
+import { supabase } from '@/database/supabaseClient';
 
 export interface Track {
   id: string;
@@ -50,127 +50,131 @@ export interface UpdateTrackData {
 
 export class TrackModel {
   static async create(trackData: CreateTrackData): Promise<Track> {
-    const [track] = await db('tracks')
-      .insert({
+    const { data, error } = await supabase
+      .from('tracks')
+      .insert([{
         ...trackData,
-        genres: JSON.stringify(trackData.genres || []),
-        featured_artists: JSON.stringify(trackData.featured_artists || [])
-      })
-      .returning('*');
-    
-    return this.parseTrack(track);
+        genres: trackData.genres || [],
+        featured_artists: trackData.featured_artists || []
+      }])
+      .select()
+      .single();
+    if (error || !data) throw error || new Error('Failed to create track');
+    return data;
   }
 
   static async findById(id: string): Promise<Track | null> {
-    const track = await db('tracks')
-      .where({ id })
-      .first();
-    
-    return track ? this.parseTrack(track) : null;
+    const { data, error } = await supabase
+      .from('tracks')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) return null;
+    return data;
   }
 
   static async findByArtist(artistId: string, published = true): Promise<Track[]> {
-    const query = db('tracks')
-      .where({ artist_id: artistId });
-    
-    if (published) {
-      query.where({ is_published: true });
-    }
-    
-    const tracks = await query.orderBy('created_at', 'desc');
-    return tracks.map(this.parseTrack);
+    let query = supabase
+      .from('tracks')
+      .select('*')
+      .eq('artist_id', artistId);
+    if (published) query = query.eq('is_published', true);
+    query = query.order('created_at', { ascending: false });
+    const { data, error } = await query;
+    if (error || !data) return [];
+    return data;
   }
 
   static async findByAlbum(albumId: string): Promise<Track[]> {
-    const tracks = await db('tracks')
-      .where({ album_id: albumId, is_published: true })
-      .orderBy('track_number', 'asc');
-    
-    return tracks.map(this.parseTrack);
+    const { data, error } = await supabase
+      .from('tracks')
+      .select('*')
+      .eq('album_id', albumId)
+      .eq('is_published', true)
+      .order('track_number', { ascending: true });
+    if (error || !data) return [];
+    return data;
   }
 
   static async update(id: string, updateData: UpdateTrackData): Promise<Track | null> {
-    const dataToUpdate = { ...updateData };
-    
-    if (updateData.genres) {
-      dataToUpdate.genres = JSON.stringify(updateData.genres) as any;
-    }
-    
-    if (updateData.featured_artists) {
-      dataToUpdate.featured_artists = JSON.stringify(updateData.featured_artists) as any;
-    }
-    
-    const [track] = await db('tracks')
-      .where({ id })
+    const { data, error } = await supabase
+      .from('tracks')
       .update({
-        ...dataToUpdate,
-        updated_at: new Date()
+        ...updateData,
+        updated_at: new Date().toISOString()
       })
-      .returning('*');
-    
-    return track ? this.parseTrack(track) : null;
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) return null;
+    return data;
   }
 
   static async delete(id: string): Promise<boolean> {
-    const deleted = await db('tracks')
-      .where({ id })
-      .del();
-    
-    return deleted > 0;
+    const { error } = await supabase
+      .from('tracks')
+      .delete()
+      .eq('id', id);
+    return !error;
   }
 
   static async incrementPlayCount(id: string): Promise<void> {
-    await db('tracks')
-      .where({ id })
-      .increment('play_count', 1);
+    // Supabase does not support atomic increment in the same way as SQL, so you may need to use an RPC or fetch/update
+    const { data, error } = await supabase
+      .from('tracks')
+      .select('play_count')
+      .eq('id', id)
+      .single();
+    if (!error && data) {
+      await supabase
+        .from('tracks')
+        .update({ play_count: (data.play_count || 0) + 1 })
+        .eq('id', id);
+    }
   }
 
   static async getTrending(limit = 50): Promise<Track[]> {
-    const tracks = await db('tracks')
-      .where({ is_published: true })
-      .orderBy('play_count', 'desc')
+    const { data, error } = await supabase
+      .from('tracks')
+      .select('*')
+      .eq('is_published', true)
+      .order('play_count', { ascending: false })
       .limit(limit);
-    
-    return tracks.map(this.parseTrack);
+    if (error || !data) return [];
+    return data;
   }
 
   static async getRecentReleases(limit = 20): Promise<Track[]> {
-    const tracks = await db('tracks')
-      .where({ is_published: true })
-      .orderBy('created_at', 'desc')
+    const { data, error } = await supabase
+      .from('tracks')
+      .select('*')
+      .eq('is_published', true)
+      .order('created_at', { ascending: false })
       .limit(limit);
-    
-    return tracks.map(this.parseTrack);
+    if (error || !data) return [];
+    return data;
   }
 
   static async search(query: string, limit = 20): Promise<Track[]> {
-    const tracks = await db('tracks')
-      .where({ is_published: true })
-      .where(function() {
-        this.whereILike('title', `%${query}%`)
-            .orWhereILike('lyrics', `%${query}%`);
-      })
+    // Supabase full text search or ilike
+    const { data, error } = await supabase
+      .from('tracks')
+      .select('*')
+      .eq('is_published', true)
+      .or(`title.ilike.%${query}%,lyrics.ilike.%${query}%`)
       .limit(limit);
-    
-    return tracks.map(this.parseTrack);
+    if (error || !data) return [];
+    return data;
   }
 
   static async getByGenre(genre: string, limit = 20): Promise<Track[]> {
-    const tracks = await db('tracks')
-      .where({ is_published: true })
-      .whereRaw('genres::jsonb ? ?', [genre])
+    const { data, error } = await supabase
+      .from('tracks')
+      .select('*')
+      .eq('is_published', true)
+      .contains('genres', [genre])
       .limit(limit);
-    
-    return tracks.map(this.parseTrack);
-  }
-
-  private static parseTrack(track: any): Track {
-    return {
-      ...track,
-      genres: typeof track.genres === 'string' ? JSON.parse(track.genres) : track.genres,
-      featured_artists: typeof track.featured_artists === 'string' 
-        ? JSON.parse(track.featured_artists) 
-        : track.featured_artists
-    };
+    if (error || !data) return [];
+    return data;
   }
 }

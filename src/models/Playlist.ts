@@ -1,4 +1,4 @@
-import db from '@/database/connection';
+import { supabase } from '@/database/supabaseClient';
 
 export interface Playlist {
   id: string;
@@ -10,9 +10,8 @@ export interface Playlist {
   is_collaborative: boolean;
   total_tracks: number;
   total_duration: number;
-  follower_count: number;
-  created_at: Date;
-  updated_at: Date;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface CreatePlaylistData {
@@ -33,91 +32,77 @@ export interface UpdatePlaylistData {
 }
 
 export class PlaylistModel {
-  static async create(playlistData: CreatePlaylistData): Promise<Playlist> {
-    const [playlist] = await db('playlists')
-      .insert(playlistData)
-      .returning('*');
-    
+  static async create(data: CreatePlaylistData): Promise<Playlist> {
+    const { data: playlist, error } = await supabase
+      .from('playlists')
+      .insert([data])
+      .select()
+      .single();
+    if (error || !playlist) throw error || new Error('Failed to create playlist');
     return playlist;
   }
 
   static async findById(id: string): Promise<Playlist | null> {
-    const playlist = await db('playlists')
-      .where({ id })
-      .first();
-    
-    return playlist || null;
+    const { data, error } = await supabase
+      .from('playlists')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) return null;
+    return data;
   }
 
   static async findByUserId(userId: string): Promise<Playlist[]> {
-    const playlists = await db('playlists')
-      .where({ user_id: userId })
-      .orderBy('created_at', 'desc');
-    
-    return playlists;
+    const { data, error } = await supabase
+      .from('playlists')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    if (error || !data) return [];
+    return data;
+  }
+
+  static async getPublic(limit = 20, offset = 0): Promise<Playlist[]> {
+    const { data, error } = await supabase
+      .from('playlists')
+      .select('*')
+      .eq('is_public', true)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+    if (error || !data) return [];
+    return data;
   }
 
   static async update(id: string, updateData: UpdatePlaylistData): Promise<Playlist | null> {
-    const [playlist] = await db('playlists')
-      .where({ id })
+    const { data, error } = await supabase
+      .from('playlists')
       .update({
         ...updateData,
-        updated_at: new Date()
+        updated_at: new Date().toISOString()
       })
-      .returning('*');
-    
-    return playlist || null;
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) return null;
+    return data;
   }
 
   static async delete(id: string): Promise<boolean> {
-    const deleted = await db('playlists')
-      .where({ id })
-      .del();
-    
-    return deleted > 0;
-  }
-
-  static async getPublic(limit = 50, offset = 0): Promise<Playlist[]> {
-    const playlists = await db('playlists')
-      .where({ is_public: true })
-      .orderBy('follower_count', 'desc')
-      .limit(limit)
-      .offset(offset);
-    
-    return playlists;
+    const { error } = await supabase
+      .from('playlists')
+      .delete()
+      .eq('id', id);
+    return !error;
   }
 
   static async search(query: string, limit = 20): Promise<Playlist[]> {
-    const playlists = await db('playlists')
-      .where({ is_public: true })
-      .where(function() {
-        this.whereILike('name', `%${query}%`)
-            .orWhereILike('description', `%${query}%`);
-      })
+    const { data, error } = await supabase
+      .from('playlists')
+      .select('*')
+      .eq('is_public', true)
+      .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
       .limit(limit);
-    
-    return playlists;
-  }
-
-  static async updateStats(id: string, totalTracks: number, totalDuration: number): Promise<void> {
-    await db('playlists')
-      .where({ id })
-      .update({
-        total_tracks: totalTracks,
-        total_duration: totalDuration,
-        updated_at: new Date()
-      });
-  }
-
-  static async incrementFollowerCount(id: string): Promise<void> {
-    await db('playlists')
-      .where({ id })
-      .increment('follower_count', 1);
-  }
-
-  static async decrementFollowerCount(id: string): Promise<void> {
-    await db('playlists')
-      .where({ id })
-      .decrement('follower_count', 1);
+    if (error || !data) return [];
+    return data;
   }
 }

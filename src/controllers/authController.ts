@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 import { UserModel, CreateUserData } from '@/models/User';
 import { ArtistModel } from '@/models/Artist';
 import { AuthRequest } from '@/middleware/authMiddleware';
@@ -35,9 +36,12 @@ export class AuthController {
         });
       }
 
+      // Hash the password before storing
+      const hashedPassword = await bcrypt.hash(password, 10);
+
       const userData: CreateUserData = {
         email,
-        password,
+        password_hash: hashedPassword,
         display_name: displayName,
         first_name: firstName,
         last_name: lastName,
