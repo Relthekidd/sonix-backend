@@ -1,5 +1,5 @@
 import express from 'express';
-import { TrackController } from '@/controllers/trackController';
+import * as TrackController from '@/controllers/trackController';
 import { authenticate } from '@/middleware/authMiddleware';
 import { uploadTrackFiles } from '@/middleware/uploadMiddleware';
 

@@ -1,301 +1,246 @@
 import { Request, Response } from 'express';
-import { TrackModel, CreateTrackData, UpdateTrackData } from '@/models/Track';
-import { ArtistModel } from '@/models/Artist';
-import { PlayHistoryModel } from '@/models/PlayHistory';
-import { AuthRequest } from '@/middleware/authMiddleware';
+import { supabase, supabaseAdmin } from '@/database/supabaseClient';
 
-export class TrackController {
-  static async getAllTracks(req: Request, res: Response) {
-    try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const genre = req.query.genre as string;
+// Create a new track (already implemented)
+export async function createTrack(req: Request, res: Response) {
+  try {
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.replace('Bearer ', '');
 
-      let tracks;
-      if (genre) {
-        tracks = await TrackModel.getByGenre(genre, limit);
-      } else {
-        tracks = await TrackModel.getTrending(limit);
-      }
-
-      res.status(200).json({
-        success: true,
-        data: tracks,
-        pagination: {
-          page,
-          limit,
-          total: tracks.length
-        }
-      });
-    } catch (error) {
-      console.error('Get tracks error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to get tracks',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !userData?.user) {
+      return res.status(401).json({ message: 'Invalid token' });
     }
+    const { id: user_id } = userData.user;
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user_id)
+      .single();
+
+    if (profileError || !profile || profile.role !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can upload tracks' });
+    }
+
+    const { data: track, error } = await supabaseAdmin
+      .from('tracks')
+      .insert([req.body])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase insert error:', error);
+      return res.status(500).json({ message: 'Failed to upload track' });
+    }
+
+    return res.status(201).json(track);
+  } catch (err) {
+    console.error('Server error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
   }
+}
 
-  static async getTrackById(req: Request, res: Response) {
-    try {
-      const { id } = req.params;
-      if (!id) {
-        return res.status(400).json({
-          success: false,
-          message: 'Track ID is required'
-        });
-      }
-      const track = await TrackModel.findById(id);
+// Get all tracks with metadata
+export async function getAllTracks(_req: Request, res: Response) {
+  try {
+    const { data, error } = await supabase
+      .from('tracks')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-      if (!track) {
-        return res.status(404).json({
-          success: false,
-          message: 'Track not found'
-        });
-      }
-
-      return res.status(200).json({
-        success: true,
-        data: track
-      });
-    } catch (error) {
-      console.error('Get track error:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to get track',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+    if (error) {
+      console.error('Supabase getAllTracks error:', error);
+      return res.status(500).json({ message: 'Failed to fetch tracks' });
     }
+
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    console.error('Server error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
   }
+}
 
-  static async createTrack(req: AuthRequest, res: Response) {
-    try {
-      const {
-        title,
-        lyrics,
-        audioUrl,
-        coverUrl,
-        duration,
-        trackNumber,
-        genres,
-        featuredArtists,
-        isExplicit,
-        price,
-        albumId
-      } = req.body;
+// Get trending tracks (most play_count in last 7 days)
+export async function getTrendingTracks(_req: Request, res: Response) {
+  try {
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-      // Verify user has artist profile
-      const artist = await ArtistModel.findByUserId(req.user.id);
-      if (!artist) {
-        return res.status(403).json({
-          success: false,
-          message: 'Artist profile required to create tracks'
-        });
-      }
+    // Get play counts for tracks in last 7 days
+    const { data: plays, error: playsError } = await supabase
+      .from('song_plays')
+      .select('track_id')
+      .gte('played_at', since);
 
-      const trackData: CreateTrackData = {
-        artist_id: artist.id,
-        album_id: albumId,
-        title,
-        lyrics,
-        audio_url: audioUrl,
-        cover_url: coverUrl,
-        duration,
-        track_number: trackNumber,
-        genres,
-        featured_artists: featuredArtists,
-        is_explicit: isExplicit,
-        price
-      };
-
-      const track = await TrackModel.create(trackData);
-
-      return res.status(201).json({
-        success: true,
-        message: 'Track created successfully',
-        data: track
-      });
-    } catch (error) {
-      console.error('Create track error:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to create track',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+    if (playsError) {
+      console.error('Supabase getTrendingTracks error:', playsError);
+      return res.status(500).json({ message: 'Failed to fetch trending tracks' });
     }
+
+    // Count plays per track
+    const playCounts: Record<string, number> = {};
+    plays?.forEach(row => {
+      playCounts[row.track_id] = (playCounts[row.track_id] || 0) + 1;
+    });
+
+    // Get top 20 track IDs
+    const topTrackIds = Object.entries(playCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20)
+      .map(([trackId]) => trackId);
+
+    if (topTrackIds.length === 0) {
+      return res.status(200).json({ success: true, data: [] });
+    }
+
+    // Fetch track metadata
+    const { data: tracks, error: tracksError } = await supabase
+      .from('tracks')
+      .select('*')
+      .in('id', topTrackIds);
+
+    if (tracksError) {
+      console.error('Supabase getTrendingTracks error:', tracksError);
+      return res.status(500).json({ message: 'Failed to fetch trending tracks' });
+    }
+
+    // Sort tracks by play count
+    const sortedTracks = tracks?.sort(
+      (a, b) => (playCounts[b.id] || 0) - (playCounts[a.id] || 0)
+    );
+
+    return res.status(200).json({ success: true, data: sortedTracks });
+  } catch (err) {
+    console.error('Server error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
   }
+}
 
-  static async updateTrack(req: AuthRequest, res: Response) {
-    try {
-      const { id } = req.params;
-      if (!id) {
-        return res.status(400).json({
-          success: false,
-          message: 'Track ID is required'
-        });
-      }
-      const updateData: UpdateTrackData = req.body;
+// Get recent releases (sorted by most recent release_date)
+export async function getRecentReleases(_req: Request, res: Response) {
+  try {
+    const { data, error } = await supabase
+      .from('tracks')
+      .select('*')
+      .order('release_date', { ascending: false })
+      .limit(20);
 
-      // Verify track exists and user owns it
-      const track = await TrackModel.findById(id);
-      if (!track) {
-        return res.status(404).json({
-          success: false,
-          message: 'Track not found'
-        });
-      }
-
-      const artist = await ArtistModel.findByUserId(req.user.id);
-      if (!artist || track.artist_id !== artist.id) {
-        return res.status(403).json({
-          success: false,
-          message: 'Not authorized to update this track'
-        });
-      }
-
-      const updatedTrack = await TrackModel.update(id, updateData);
-
-      return res.status(200).json({
-        success: true,
-        message: 'Track updated successfully',
-        data: updatedTrack
-      });
-    } catch (error) {
-      console.error('Update track error:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to update track',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+    if (error) {
+      console.error('Supabase getRecentReleases error:', error);
+      return res.status(500).json({ message: 'Failed to fetch recent releases' });
     }
+
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    console.error('Server error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
   }
+}
 
-  static async deleteTrack(req: AuthRequest, res: Response) {
-    try {
-      const { id } = req.params;
-      if (!id) {
-        return res.status(400).json({
-          success: false,
-          message: 'Track ID is required'
-        });
-      }
+// Get metadata for a single track by id
+export async function getTrackById(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabase
+      .from('tracks')
+      .select('*')
+      .eq('id', id)
+      .single();
 
-      // Verify track exists and user owns it
-      const track = await TrackModel.findById(id);
-      if (!track) {
-        return res.status(404).json({
-          success: false,
-          message: 'Track not found'
-        });
-      }
-
-      const artist = await ArtistModel.findByUserId(req.user.id);
-      if (!artist || track.artist_id !== artist.id) {
-        return res.status(403).json({
-          success: false,
-          message: 'Not authorized to delete this track'
-        });
-      }
-
-      await TrackModel.delete(id);
-
-      return res.status(200).json({
-        success: true,
-        message: 'Track deleted successfully'
-      });
-    } catch (error) {
-      console.error('Delete track error:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to delete track',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+    if (error || !data) {
+      return res.status(404).json({ message: 'Track not found' });
     }
+
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    console.error('Server error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
   }
+}
 
-  static async recordPlay(req: AuthRequest, res: Response) {
-    try {
-      const { id } = req.params;
-      if (!id) {
-        return res.status(400).json({
-          success: false,
-          message: 'Track ID is required'
-        });
-      }
-      const { playDuration, completed, deviceType } = req.body;
+// Update a track’s metadata by id
+export async function updateTrack(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
 
-      // Verify track exists
-      const track = await TrackModel.findById(id);
-      if (!track) {
-        return res.status(404).json({
-          success: false,
-          message: 'Track not found'
-        });
-      }
+    const { data, error } = await supabaseAdmin
+      .from('tracks')
+      .update({ ...updateData, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
 
-      // Record play in history
-      await PlayHistoryModel.create({
-        user_id: req.user.id,
-        track_id: id,
-        play_duration: playDuration,
-        completed,
-        device_type: deviceType,
-        ip_address: req.ip ?? ''
-      });
-
-      // Increment play count
-      await TrackModel.incrementPlayCount(id);
-
-      return res.status(200).json({
-        success: true,
-        message: 'Play recorded successfully'
-      });
-    } catch (error) {
-      console.error('Record play error:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to record play',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+    if (error || !data) {
+      return res.status(404).json({ message: 'Failed to update track' });
     }
+
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    console.error('Server error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
   }
+}
 
-  static async getTrendingTracks(req: Request, res: Response) {
-    try {
-      const limit = parseInt(req.query.limit as string) || 50;
-      const tracks = await TrackModel.getTrending(limit);
+// Remove a track by id
+export async function deleteTrack(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
 
-      res.status(200).json({
-        success: true,
-        data: tracks
-      });
-    } catch (error) {
-      console.error('Get trending tracks error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to get trending tracks',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+    const { error } = await supabaseAdmin
+      .from('tracks')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      return res.status(404).json({ message: 'Failed to delete track' });
     }
+
+    return res.status(200).json({ success: true, message: 'Track deleted' });
+  } catch (err) {
+    console.error('Server error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
   }
+}
 
-  static async getRecentReleases(req: Request, res: Response) {
-    try {
-      const limit = parseInt(req.query.limit as string) || 20;
-      const tracks = await TrackModel.getRecentReleases(limit);
+// Log a new play in song_plays and increment the track’s play_count
+export async function recordPlay(req: Request, res: Response) {
+  try {
+    const { track_id, user_id, device_type } = req.body;
 
-      res.status(200).json({
-        success: true,
-        data: tracks
-      });
-    } catch (error) {
-      console.error('Get recent releases error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to get recent releases',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+    // 1. Insert play record
+    const { error: playError } = await supabaseAdmin
+      .from('song_plays')
+      .insert([{
+        track_id,
+        user_id,
+        device_type: device_type || 'unknown',
+        played_at: new Date().toISOString()
+      }]);
+
+    if (playError) {
+      console.error('Supabase recordPlay error:', playError);
+      return res.status(500).json({ message: 'Failed to record play' });
     }
+
+    // 2. Increment play_count
+    // Fetch current play_count
+    const { data: track, error: trackError } = await supabaseAdmin
+      .from('tracks')
+      .select('play_count')
+      .eq('id', track_id)
+      .single();
+
+    if (!trackError && track) {
+      await supabaseAdmin
+        .from('tracks')
+        .update({ play_count: (track.play_count || 0) + 1 })
+        .eq('id', track_id);
+    }
+
+    return res.status(201).json({ success: true, message: 'Play recorded' });
+  } catch (err) {
+    console.error('Server error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
   }
 }
