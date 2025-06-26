@@ -8,6 +8,8 @@ export interface Artist {
   avatar_url?: string;
   banner_url?: string;
   genres: string[];
+  social_links?: Record<string, string>;
+  is_verified?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -19,6 +21,7 @@ export interface CreateArtistData {
   avatar_url?: string;
   banner_url?: string;
   genres?: string[];
+  social_links?: Record<string, string>;
 }
 
 export interface UpdateArtistData {
@@ -27,6 +30,7 @@ export interface UpdateArtistData {
   avatar_url?: string;
   banner_url?: string;
   genres?: string[];
+  social_links?: Record<string, string>;
 }
 
 export class ArtistModel {
@@ -100,6 +104,36 @@ export class ArtistModel {
       .order('created_at', { ascending: false })
       .limit(limit);
     if (error || !data) return [];
+    return data;
+  }
+
+  static async getAll(limit = 20, offset = 0): Promise<Artist[]> {
+    const { data, error } = await supabase
+      .from('artists')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+    if (error || !data) return [];
+    return data;
+  }
+
+  static async getUnverifiedArtists(): Promise<Artist[]> {
+    const { data, error } = await supabase
+      .from('artists')
+      .select('*')
+      .eq('is_verified', false);
+    if (error || !data) return [];
+    return data;
+  }
+
+  static async updateVerificationStatus(id: string, is_verified: boolean): Promise<Artist | null> {
+    const { data, error } = await supabase
+      .from('artists')
+      .update({ is_verified })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) return null;
     return data;
   }
 }

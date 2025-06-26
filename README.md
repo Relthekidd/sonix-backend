@@ -1,12 +1,12 @@
 # Sonix Music API
 
-A comprehensive backend API for the Sonix music streaming application built with Node.js, Express, PostgreSQL, and AWS S3.
+A comprehensive backend API for the Sonix music streaming application built with Node.js, Express, and Supabase.
 
 ## Features
 
 - **User Authentication**: JWT-based authentication with role-based access control
 - **Music Management**: Complete CRUD operations for tracks, albums, playlists, and artist profiles
-- **File Upload**: AWS S3 integration for audio files and images
+- **File Upload**: (If using Supabase Storage or Firebase, update here)
 - **Search Functionality**: Full-text search across tracks, artists, albums, and playlists
 - **User Interactions**: Follow/unfollow users, like tracks, create playlists
 - **Security**: Rate limiting, input validation, secure file uploads
@@ -16,8 +16,8 @@ A comprehensive backend API for the Sonix music streaming application built with
 
 - **Runtime**: Node.js with TypeScript
 - **Framework**: Express.js
-- **Database**: PostgreSQL with Knex.js ORM
-- **File Storage**: AWS S3
+- **Database**: Supabase (PostgreSQL + REST/Realtime API)
+- **File Storage**: (Update to Supabase Storage or Firebase if used)
 - **Authentication**: JWT (JSON Web Tokens)
 - **Validation**: Joi and express-validator
 - **Documentation**: Swagger/OpenAPI
@@ -28,8 +28,7 @@ A comprehensive backend API for the Sonix music streaming application built with
 ### Prerequisites
 
 - Node.js (v16 or higher)
-- PostgreSQL (v12 or higher)
-- AWS Account with S3 access
+- Supabase project (free tier is sufficient)
 - npm or yarn
 
 ### Installation
@@ -54,38 +53,27 @@ A comprehensive backend API for the Sonix music streaming application built with
    ```env
    NODE_ENV=development
    PORT=3000
-   
-   # Database
-   DATABASE_URL=postgresql://username:password@localhost:5432/sonix_db
-   
+
+   # Supabase
+   SUPABASE_URL=your-supabase-url
+   SUPABASE_ANON_KEY=your-supabase-anon-key
+   SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+
    # JWT
    JWT_SECRET=your-super-secret-jwt-key
    JWT_EXPIRES_IN=7d
-   
-   # AWS S3
-   AWS_ACCESS_KEY_ID=your-aws-access-key
-   AWS_SECRET_ACCESS_KEY=your-aws-secret-key
-   AWS_REGION=us-east-1
-   S3_BUCKET_NAME=sonix-music-files
    ```
 
 4. **Database Setup**
-   ```bash
-   # Create database
-   createdb sonix_db
-   
-   # Run migrations
-   npm run migrate
-   
-   # Seed database (optional)
-   npm run seed
-   ```
+   - **No local database or migrations needed!**
+   - All schema changes and management are done via the [Supabase UI](https://app.supabase.com/).
+   - You can use Supabase SQL editor for custom queries or schema changes.
 
 5. **Start the server**
    ```bash
    # Development
    npm run dev
-   
+
    # Production
    npm run build
    npm start
@@ -150,35 +138,10 @@ Once the server is running, visit:
 
 ## Database Schema
 
-### Users
-- User authentication and profile information
-- Role-based access (listener, artist, admin)
-- Privacy settings and preferences
-
-### Artists
-- Artist profiles linked to user accounts
-- Stage names, bio, social links
-- Performance metrics
-
-### Tracks
-- Audio files with metadata
-- Genre classification
-- Play counts and engagement metrics
-
-### Albums
-- Collections of tracks
-- Release information and artwork
-
-### Playlists
-- User-created track collections
-- Public/private visibility
-- Collaborative features
-
-### Relationships
-- User follows
-- Track likes
-- Playlist memberships
-- Play history
+- **Supabase** is the database platform (PostgreSQL under the hood).
+- All schema changes are managed in the Supabase dashboard.
+- **Row Level Security (RLS)**: If enabled, policies are managed in Supabase UI.
+- Relationships, constraints, and indexes are managed via Supabase.
 
 ## Security Features
 
@@ -192,12 +155,16 @@ Once the server is running, visit:
 
 ## File Upload
 
-The API supports secure file uploads to AWS S3:
-
-- **Audio Files**: MP3, WAV, FLAC formats
-- **Images**: JPEG, PNG formats for covers and avatars
+<!--
+If using Supabase Storage:
+-->
+- **Audio Files & Images**: Uploaded to Supabase Storage buckets
 - **Size Limits**: Configurable per file type
-- **Organization**: Automatic folder structure in S3
+- **Organization**: Automatic folder structure in Supabase Storage
+
+<!--
+If using Firebase or another provider, update this section accordingly.
+-->
 
 ## Development
 
@@ -207,28 +174,29 @@ npm run dev          # Start development server
 npm run build        # Build TypeScript
 npm run start        # Start production server
 npm run test         # Run tests
-npm run migrate      # Run database migrations
-npm run seed         # Seed database
 ```
 
 ## Deployment
 
 ### Environment Variables
 Ensure all production environment variables are set:
-- Database connection
+- Supabase connection (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`)
 - JWT secrets
-- AWS credentials
 - CORS origins
 
 ### Database
-- Run migrations in production
-- Set up connection pooling
-- Configure backups
+- All schema changes are managed in Supabase UI
+- Enable/adjust Row Level Security (RLS) as needed
+- Configure backups in Supabase
 
 ### File Storage
-- Configure S3 bucket policies
+- Configure Supabase Storage bucket policies
 - Set up CDN if needed
 - Configure backup strategies
+
+### Deploying the Backend
+- Deploy with [Railway](https://railway.app/), [Vercel](https://vercel.com/), or your preferred Node.js host.
+- No database migrations or seeds are needed—Supabase manages your schema.
 
 ## Contributing
 
