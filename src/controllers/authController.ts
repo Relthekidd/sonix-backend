@@ -43,8 +43,8 @@ export class AuthController {
         email,
         password_hash: hashedPassword,
         display_name: displayName,
-        first_name: firstName,
-        last_name: lastName,
+        first_name: firstName ?? '',
+        last_name: lastName ?? '',
         role: role || 'listener'
       };
 
