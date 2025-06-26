@@ -20,6 +20,7 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
   try {
     const secret = getRequiredEnv('SUPABASE_JWT_SECRET');
     const decoded = jwt.verify(token, secret);
+    console.log('Decoded JWT:', decoded); // <-- Add this line
     req.user = decoded;
     return next();
   } catch (err) {
