@@ -5,6 +5,12 @@ import { UserModel, CreateUserData } from '@/models/User';
 import { ArtistModel } from '@/models/Artist';
 import { AuthRequest } from '@/middleware/authMiddleware';
 
+const getJwtSecret = (): string => {
+  const secret = process.env.SUPABASE_JWT_SECRET;
+  if (!secret) throw new Error('SUPABASE_JWT_SECRET not set');
+  return secret as string;
+};
+
 export class AuthController {
   static async getMe(req: AuthRequest, res: Response) {
     return res.status(200).json({
@@ -58,9 +64,8 @@ export class AuthController {
       }
 
       // Use Supabase JWT secret for signing
-      const secret = process.env.SUPABASE_JWT_SECRET as string;
+      const secret = getJwtSecret();
       const expiresIn = ((process.env.JWT_EXPIRES_IN as string) || '7d') as any;
-      if (!secret) throw new Error('SUPABASE_JWT_SECRET not set');
 
       const token = jwt.sign(
         { userId: user.id, email: user.email, role: user.role },
@@ -111,9 +116,8 @@ export class AuthController {
       await UserModel.updateLastLogin(user.id);
 
       // Use Supabase JWT secret for signing
-      const secret = process.env.SUPABASE_JWT_SECRET as string;
+      const secret = getJwtSecret();
       const expiresIn = ((process.env.JWT_EXPIRES_IN as string) || '7d') as any;
-      if (!secret) throw new Error('SUPABASE_JWT_SECRET not set');
 
       const token = jwt.sign(
         { userId: user.id, email: user.email, role: user.role },

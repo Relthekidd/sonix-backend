@@ -3,6 +3,12 @@ import { Server as HTTPServer } from 'http';
 import jwt from 'jsonwebtoken';
 import { UserModel } from '@/models/User';
 
+const getJwtSecret = (): string => {
+  const secret = process.env.SUPABASE_JWT_SECRET;
+  if (!secret) throw new Error('SUPABASE_JWT_SECRET not set');
+  return secret as string;
+};
+
 export class WebSocketService {
   private io: SocketIOServer;
   private connectedUsers: Map<string, string> = new Map(); // userId -> socketId
@@ -31,7 +37,7 @@ export class WebSocketService {
           return next(new Error('Authentication token required'));
         }
 
-        const decoded = jwt.verify(token, process.env.SUPABASE_JWT_SECRET!) as any;
+        const decoded = jwt.verify(token, getJwtSecret()) as any;
         const user = await UserModel.findById(decoded.userId);
         
         if (!user) {
