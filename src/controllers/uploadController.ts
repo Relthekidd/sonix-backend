@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '@/middleware/authMiddleware';
 import { ArtistModel } from '@/models/Artist';
+import { uploadToSupabaseS3 } from '@/services/uploadService';
 
 export class UploadController {
   static async uploadAudio(req: AuthRequest, res: Response) {
@@ -21,7 +22,11 @@ export class UploadController {
         });
       }
 
-      const audioUrl = (req.file as any).location || req.file.path;
+      const fileBuffer = req.file.buffer;
+      const key = `audio/${req.file.filename}`;
+      const contentType = req.file.mimetype;
+
+      const audioUrl = await uploadToSupabaseS3(fileBuffer, key, contentType);
 
       return res.status(201).json({
         success: true,
