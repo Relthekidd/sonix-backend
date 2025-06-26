@@ -3,8 +3,9 @@ import multerS3 from 'multer-s3';
 import { S3Client } from '@aws-sdk/client-s3';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
+import { Request } from 'express';
 
-// Extend Express Request interface to include 'user'
+// Extend Express Request type to include 'user'
 declare module 'express-serve-static-core' {
   interface Request {
     user?: {
@@ -14,19 +15,21 @@ declare module 'express-serve-static-core' {
   }
 }
 
-import { Request } from 'express';
+// Ensure required env vars are set at startup
+const requiredEnv = (key: string): string => {
+  const value = process.env[key];
+  if (!value) throw new Error(`${key} is not set`);
+  return value;
+};
 
-// Configure AWS S3Client (SDK v3) with spread syntax for credentials
 const s3 = new S3Client({
-  region: process.env.AWS_REGION || 'us-east-1',
-  ...(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
-    ? {
-        credentials: {
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-        } as { accessKeyId: string; secretAccessKey: string }
-      }
-    : {})
+  region: requiredEnv('AWS_REGION'),
+  credentials: {
+    accessKeyId: requiredEnv('AWS_ACCESS_KEY_ID'),
+    secretAccessKey: requiredEnv('AWS_SECRET_ACCESS_KEY'),
+  },
+  endpoint: requiredEnv('AWS_S3_ENDPOINT'),
+  forcePathStyle: true,
 });
 
 // File filter function
@@ -52,8 +55,8 @@ const fileFilter = (_req: Request, file: Express.Multer.File, cb: multer.FileFil
 
 // S3 upload configuration
 const s3Upload = multerS3({
-  s3: s3,
-  bucket: process.env.AWS_S3_BUCKET!, // <-- use AWS_S3_BUCKET for consistency
+  s3,
+  bucket: requiredEnv('AWS_S3_BUCKET'), // This will throw if undefined
   acl: 'public-read',
   metadata: (_req: Request, file, cb) => {
     cb(null, {

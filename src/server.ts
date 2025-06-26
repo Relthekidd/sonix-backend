@@ -30,6 +30,7 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 // Log the Supabase JWT secret for debugging (remove in production)
 console.log('✅ SUPABASE_JWT_SECRET:', process.env.SUPABASE_JWT_SECRET);
+console.log('S3 Bucket:', process.env.AWS_S3_BUCKET); // should not be undefined
 
 const app = express();
 app.set('trust proxy', 1); // Enable trust proxy for correct req.ip and secure cookies
