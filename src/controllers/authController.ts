@@ -57,9 +57,10 @@ export class AuthController {
         });
       }
 
-      const secret = process.env.JWT_SECRET as string;
+      // Use Supabase JWT secret for signing
+      const secret = process.env.SUPABASE_JWT_SECRET as string;
       const expiresIn = ((process.env.JWT_EXPIRES_IN as string) || '7d') as any;
-      if (!secret) throw new Error('JWT_SECRET not set');
+      if (!secret) throw new Error('SUPABASE_JWT_SECRET not set');
 
       const token = jwt.sign(
         { userId: user.id, email: user.email, role: user.role },
@@ -109,9 +110,10 @@ export class AuthController {
 
       await UserModel.updateLastLogin(user.id);
 
-      const secret = process.env.JWT_SECRET as string;
+      // Use Supabase JWT secret for signing
+      const secret = process.env.SUPABASE_JWT_SECRET as string;
       const expiresIn = ((process.env.JWT_EXPIRES_IN as string) || '7d') as any;
-      if (!secret) throw new Error('JWT_SECRET not set');
+      if (!secret) throw new Error('SUPABASE_JWT_SECRET not set');
 
       const token = jwt.sign(
         { userId: user.id, email: user.email, role: user.role },

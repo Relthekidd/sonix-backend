@@ -1,36 +1,27 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { UserModel } from '@/models/User';
 
 export interface AuthRequest extends Request {
   user?: any;
 }
 
-export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {
+// Use Supabase JWT secret for all token verification
+export const authenticate = (req: AuthRequest, res: Response, next: NextFunction) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      success: false,
+      message: 'Access token required'
+    });
+  }
+  const token = authHeader.substring(7);
+  const secret = process.env.SUPABASE_JWT_SECRET;
+  if (!secret) throw new Error('SUPABASE_JWT_SECRET not set');
+
   try {
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        success: false,
-        message: 'Access token required'
-      });
-    }
-    
-    const token = authHeader.substring(7);
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
-    
-    const user = await UserModel.findById(decoded.userId);
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid token'
-      });
-    }
-    
-    req.user = user;
-    next();
-    return;
+    const decoded = jwt.verify(token, secret);
+    req.user = decoded;
+    return next();
   } catch (error) {
     return res.status(401).json({
       success: false,
@@ -47,36 +38,47 @@ export const authorize = (...roles: string[]) => {
         message: 'Authentication required'
       });
     }
-    
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
         message: 'Insufficient permissions'
       });
     }
-    
-    next();
-    return;
+    return next();
   };
 };
 
-export const optionalAuth = async (req: AuthRequest, next: NextFunction) => {
+export const optionalAuth = (req: AuthRequest, _res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;
-    
-    if (authHeader && authHeader.startsWith('Bearer ')) {
+    const secret = process.env.SUPABASE_JWT_SECRET;
+    if (authHeader && authHeader.startsWith('Bearer ') && secret) {
       const token = authHeader.substring(7);
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
-      
-      const user = await UserModel.findById(decoded.userId);
-      if (user) {
-        req.user = user;
-      }
+      const decoded = jwt.verify(token, secret);
+      req.user = decoded;
     }
-    
-    next();
   } catch (error) {
-    // Continue without authentication
-    next();
+    // Ignore errors, continue unauthenticated
+  }
+  return next();
+};
+
+export const verifySupabaseToken = (req: AuthRequest, res: Response, next: NextFunction) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+  const token = authHeader.split(' ')[1];
+  const secret = process.env.SUPABASE_JWT_SECRET;
+  if (!secret) {
+    return res.status(500).json({ error: 'SUPABASE_JWT_SECRET not set' });
+  }
+  try {
+    const decoded = jwt.verify(token, secret as string);
+    req.user = decoded;
+    return next();
+  } catch (err: any) {
+    console.error('Token verification failed:', err.message);
+    return res.status(403).json({ error: 'Invalid token' });
   }
 };

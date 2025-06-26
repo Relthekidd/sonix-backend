@@ -7,6 +7,7 @@ import morgan from 'morgan';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import { createServer } from 'http';
+import path from 'path';
 import dotenv from 'dotenv';
 
 import { errorHandler, notFound } from '@/middleware/errorMiddleware';
@@ -24,7 +25,11 @@ import playlistRoutes from '@/routes/playlistRoutes';
 import searchRoutes from '@/routes/searchRoutes';
 import uploadRoutes from '@/routes/uploadRoutes';
 
-dotenv.config();
+// Load .env from project root, even if running from dist/
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+// Log the Supabase JWT secret for debugging (remove in production)
+console.log('✅ SUPABASE_JWT_SECRET:', process.env.SUPABASE_JWT_SECRET);
 
 const app = express();
 app.set('trust proxy', 1); // Enable trust proxy for correct req.ip and secure cookies

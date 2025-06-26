@@ -31,7 +31,7 @@ export class WebSocketService {
           return next(new Error('Authentication token required'));
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+        const decoded = jwt.verify(token, process.env.SUPABASE_JWT_SECRET!) as any;
         const user = await UserModel.findById(decoded.userId);
         
         if (!user) {
