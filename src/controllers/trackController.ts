@@ -3,41 +3,85 @@ import { supabase, supabaseAdmin } from '@/database/supabaseClient';
 
 // Create a new track (already implemented)
 export async function createTrack(req: Request, res: Response) {
+  // Ensure req.user is defined
+  if (!req.user || !req.user.id) {
+    return res.status(401).json({ message: 'Unauthorized: user not authenticated' });
+  }
+  // Fetch the latest role from the users table
+  const { data: user, error } = await supabase
+    .from('users') // or 'profiles' if you use a separate table
+    .select('role')
+    .eq('id', req.user.id)
+    .single();
+
+  if (error || !user) {
+    return res.status(403).json({ message: 'User not found or cannot fetch role' });
+  }
+
+  if (user.role !== 'admin') {
+    return res.status(403).json({ message: 'Only admins can upload tracks' });
+  }
+
   try {
-    const authHeader = req.headers.authorization || '';
-    const token = authHeader.replace('Bearer ', '');
+    // Extract and sanitize fields
+    const {
+      title,
+      audio_url,
+      cover_url,
+      created_by,
+      genre,
+      description,
+      album_id,
+      ...rest
+    } = req.body;
 
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
-    if (userError || !userData?.user) {
-      return res.status(401).json({ message: 'Invalid token' });
-    }
-    const { id: user_id } = userData.user;
-
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user_id)
-      .single();
-
-    if (profileError || !profile || profile.role !== 'admin') {
-      return res.status(403).json({ message: 'Only admins can upload tracks' });
+    // Ensure required fields
+    if (!title || !audio_url || !created_by) {
+      return res.status(400).json({ message: 'Missing required fields' });
     }
 
-    const { data: track, error } = await supabaseAdmin
+    // Prepare data for Supabase
+    const trackData: any = {
+      title,
+      audio_url,
+      cover_url: cover_url || null,
+      created_by,
+      genre: genre || null, // or genre: genre ? [genre] : null if expecting text[]
+      description: description || null,
+      album_id: album_id || null,
+      ...rest
+    };
+
+    // Remove undefined fields (optional, but helps with Supabase strictness)
+    Object.keys(trackData).forEach(
+      (key) => trackData[key] === undefined && delete trackData[key]
+    );
+
+    const { data, error: insertError } = await supabaseAdmin
       .from('tracks')
-      .insert([req.body])
+      .insert([trackData])
       .select()
       .single();
 
-    if (error) {
-      console.error('Supabase insert error:', error);
-      return res.status(500).json({ message: 'Failed to upload track' });
+    if (insertError) {
+      // Show detailed error in dev, generic in prod
+      const isDev = process.env.NODE_ENV !== 'production';
+      return res.status(500).json({
+        message: 'Failed to upload track',
+        error: isDev ? insertError : undefined,
+        code: insertError.code,
+        details: isDev ? insertError.details : undefined,
+      });
     }
 
-    return res.status(201).json(track);
-  } catch (err) {
-    console.error('Server error:', err);
-    return res.status(500).json({ message: 'Internal server error' });
+    return res.status(201).json({ success: true, data });
+  } catch (err: any) {
+    const isDev = process.env.NODE_ENV !== 'production';
+    return res.status(500).json({
+      message: 'Internal server error',
+      error: isDev ? err.message : undefined,
+      stack: isDev ? err.stack : undefined,
+    });
   }
 }
 
