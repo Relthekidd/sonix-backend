@@ -1,6 +1,19 @@
 import { Request, Response } from 'express';
 import { supabase, supabaseAdmin } from '@/database/supabaseClient';
 
+// Extend Express Request interface to include 'user'
+declare global {
+  namespace Express {
+    interface User {
+      id: string;
+      [key: string]: any;
+    }
+    interface Request {
+      user?: User;
+    }
+  }
+}
+
 // Create a new track (already implemented)
 export async function createTrack(req: Request, res: Response) {
   // Ensure req.user is defined

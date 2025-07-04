@@ -13,7 +13,12 @@ export const upload = multer({
 
 export const uploadAudio = upload.single('audio');
 export const uploadImage = upload.single('image');
+export const uploadCover = upload.single('cover');
 export const uploadTrackFiles = upload.fields([
   { name: 'audio', maxCount: 1 },
   { name: 'cover', maxCount: 1 }
+]);
+export const uploadArtistFiles = upload.fields([
+  { name: 'avatar', maxCount: 1 },
+  { name: 'banner', maxCount: 1 }
 ]);
