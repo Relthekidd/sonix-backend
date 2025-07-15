@@ -1,5 +1,5 @@
 import express from 'express';
-import { UploadController } from '@/controllers/uploadController';
+import * as UploadController from '@/controllers/uploadController';
 import { authenticate } from '@/middleware/authMiddleware';
 import { uploadAudio, uploadImage, uploadTrackFiles } from '@/middleware/uploadMiddleware';
 
