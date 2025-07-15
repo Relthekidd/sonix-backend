@@ -1,47 +1,77 @@
-import { Request, Response, NextFunction } from 'express';
+// src/middleware/authMiddleware.ts
+
+import { Request, RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
 import { UserModel } from '@/models/User';
 
 export interface AuthRequest extends Request {
-  user?: any;
+  user?: {
+    id: string;
+    role: string;
+  };
 }
 
 const getRequiredEnv = (key: string): string => {
-  const value = process.env[key];
-  if (!value) throw new Error(`${key} is not set`);
-  return value;
+  const v = process.env[key];
+  if (!v) throw new Error(`${key} is not set`);
+  return v;
 };
 
-export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
-    return res.status(401).json({ success: false, message: 'Access token required' });
+/**
+ * Validate JWT, look up user, then attach { id, role } to req.user
+ */
+export const authenticate: RequestHandler = async (req, res, next) => {
+  const authReq = req as AuthRequest;
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) {
+    res.status(401).json({ success: false, message: 'Access token required' });
+    return;
   }
-  const token = authHeader.slice(7);
+
+  const token = header.slice(7);
   try {
     const secret = getRequiredEnv('SUPABASE_JWT_SECRET');
-    const decoded = jwt.verify(token, secret) as any;
-    // Fetch the latest user from the DB
-    const userId = decoded.userId || decoded.sub || decoded.id;
-    const user = await UserModel.findById(userId);
-    if (!user) {
-      return res.status(401).json({ success: false, message: 'User not found' });
+    const decoded = jwt.verify(token, secret) as jwt.JwtPayload;
+
+    const supabaseId = (decoded.sub || decoded.userId || decoded.id) as string;
+    if (!supabaseId) {
+      res.status(401).json({ success: false, message: 'Invalid token payload' });
+      return;
     }
-    req.user = user; // Attach the latest user (with up-to-date role)
-    return next();
-  } catch (err) {
-    return res.status(401).json({ success: false, message: 'Invalid token' });
+
+    const userDoc = await UserModel.findById(supabaseId);
+    if (!userDoc) {
+      res.status(401).json({ success: false, message: 'User not found' });
+      return;
+    }
+
+    authReq.user = {
+      id: userDoc.id.toString(),
+      role: userDoc.role,
+    };
+
+    next();
+  } catch {
+    res.status(401).json({ success: false, message: 'Invalid or expired token' });
   }
 };
 
-export const authorize = (...roles: string[]) => {
-  return (req: AuthRequest, res: Response, next: NextFunction) => {
-    if (!req.user) {
-      return res.status(401).json({ success: false, message: 'Authentication required' });
+/**
+ * Restrict access to certain roles
+ */
+export const authorize = (...roles: string[]): RequestHandler => {
+  return (req, res, next) => {
+    const authReq = req as AuthRequest;
+
+    if (!authReq.user) {
+      res.status(401).json({ success: false, message: 'Authentication required' });
+      return;
     }
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+    if (!roles.includes(authReq.user.role)) {
+      res.status(403).json({ success: false, message: 'Insufficient permissions' });
+      return;
     }
-    return next();
+
+    next();
   };
 };
