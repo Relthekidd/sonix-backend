@@ -65,7 +65,7 @@ export class ArtistController {
 
   static async getMeArtistProfile(req: AuthRequest, res: Response) {
     try {
-      const artist = await ArtistModel.findByUserId(req.user.id);
+      const artist = await ArtistModel.findByUserId(req.user!.id);
 
       if (!artist) {
         return res.status(404).json({
@@ -93,7 +93,7 @@ export class ArtistController {
       const { stageName, bio, genres, socialLinks } = req.body;
 
       // Check if user already has an artist profile
-      const existingArtist = await ArtistModel.findByUserId(req.user.id);
+      const existingArtist = await ArtistModel.findByUserId(req.user!.id);
       if (existingArtist) {
         return res.status(400).json({
           success: false,
@@ -102,7 +102,7 @@ export class ArtistController {
       }
 
       const artistData: CreateArtistData = {
-        user_id: req.user.id,
+        user_id: req.user!.id,
         stage_name: stageName,
         bio,
         genres,
@@ -131,7 +131,7 @@ export class ArtistController {
       const { stageName, bio, genres, socialLinks } = req.body;
 
       // Find artist profile
-      const artist = await ArtistModel.findByUserId(req.user.id);
+      const artist = await ArtistModel.findByUserId(req.user!.id);
       if (!artist) {
         return res.status(404).json({
           success: false,
