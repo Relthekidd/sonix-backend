@@ -3,10 +3,14 @@
   "version": "1.0.0",
   "description": "Backend API for Sonix Music App",
   "main": "dist/server.js",
+  "engines": {
+  "node": ">=18 <21"
+  }
+,
   "scripts": {
     "dev": "nodemon -r tsconfig-paths/register src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "node -r module-alias/register dist/server.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
