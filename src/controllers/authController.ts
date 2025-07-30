@@ -13,11 +13,26 @@ const getJwtSecret = (): string => {
 
 export class AuthController {
   static async getMe(req: AuthRequest, res: Response) {
-    return res.status(200).json({
-      success: true,
-      message: 'Authenticated user info',
-      data: req.user
-    });
+    try {
+      if (!req.user) {
+        return res.status(401).json({ success: false, message: 'Authentication required' });
+      }
+
+      const user = await UserModel.findById(req.user.id);
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+
+      const { password_hash, ...userResponse } = user;
+
+      return res.status(200).json({
+        success: true,
+        data: userResponse,
+      });
+    } catch (error) {
+      console.error('GetMe error:', error);
+      return res.status(500).json({ success: false, message: 'Failed to fetch profile' });
+    }
   }
 
   static async changePassword(_req: AuthRequest, res: Response) {
