@@ -86,7 +86,7 @@
       "!src/**/*.d.ts",
       "!src/tests/**"
     ],
-    "moduleNameMapping": {
+    "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/src/$1"
     }
   },
