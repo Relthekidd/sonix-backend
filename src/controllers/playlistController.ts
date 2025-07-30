@@ -7,7 +7,7 @@ import { AuthRequest } from '@/middleware/authMiddleware';
 export class PlaylistController {
   static async getUserPlaylists(req: AuthRequest, res: Response) {
     try {
-      const playlists = await PlaylistModel.findByUserId(req.user.id);
+      const playlists = await PlaylistModel.findByUserId(req.user!.id);
 
       res.status(200).json({
         success: true,
@@ -93,7 +93,7 @@ export class PlaylistController {
       const { name, description, coverUrl, isPublic, isCollaborative } = req.body;
 
       const playlistData: CreatePlaylistData = {
-        user_id: req.user.id,
+        user_id: req.user!.id,
         name,
         description,
         cover_url: coverUrl,
@@ -138,7 +138,7 @@ export class PlaylistController {
         });
       }
 
-      if (playlist.user_id !== req.user.id) {
+      if (playlist.user_id !== req.user!.id) {
         return res.status(403).json({
           success: false,
           message: 'Not authorized to update this playlist'
@@ -181,7 +181,7 @@ export class PlaylistController {
         });
       }
 
-      if (playlist.user_id !== req.user.id) {
+      if (playlist.user_id !== req.user!.id) {
         return res.status(403).json({
           success: false,
           message: 'Not authorized to delete this playlist'
@@ -231,7 +231,7 @@ export class PlaylistController {
         });
       }
 
-      if (playlist.user_id !== req.user.id && !playlist.is_collaborative) {
+      if (playlist.user_id !== req.user!.id && !playlist.is_collaborative) {
         return res.status(403).json({
           success: false,
           message: 'Not authorized to add tracks to this playlist'
@@ -251,7 +251,7 @@ export class PlaylistController {
       await PlaylistTrackModel.addTrack({
         playlist_id: id,
         track_id: trackId,
-        added_by: req.user.id
+        added_by: req.user!.id
       });
 
       return res.status(200).json({
@@ -294,7 +294,7 @@ export class PlaylistController {
         });
       }
 
-      if (playlist.user_id !== req.user.id && !playlist.is_collaborative) {
+      if (playlist.user_id !== req.user!.id && !playlist.is_collaborative) {
         return res.status(403).json({
           success: false,
           message: 'Not authorized to remove tracks from this playlist'

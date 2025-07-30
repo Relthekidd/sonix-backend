@@ -1,21 +1,9 @@
 import { Request, Response } from 'express';
 import { supabase, supabaseAdmin } from '@/database/supabaseClient';
-
-// Extend Express Request interface to include 'user'
-declare global {
-  namespace Express {
-    interface User {
-      id: string;
-      [key: string]: any;
-    }
-    interface Request {
-      user?: User;
-    }
-  }
-}
+import { AuthRequest } from '@/middleware/authMiddleware';
 
 // Create a new track (already implemented)
-export async function createTrack(req: Request, res: Response) {
+export async function createTrack(req: AuthRequest, res: Response) {
   // Ensure req.user is defined
   if (!req.user || !req.user.id) {
     return res.status(401).json({ message: 'Unauthorized: user not authenticated' });
