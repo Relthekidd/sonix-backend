@@ -1,4 +1,3 @@
-import 'react-native-get-random-values';
 import { Request, Response } from 'express';
 import { supabaseAdmin } from '../database/supabaseClient';
 import path from 'path';
